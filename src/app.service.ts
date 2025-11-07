@@ -2,12 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class AppService {
-  getHello() {
-    return {
-      message: 'SISNOMPEG Admin Backend aktif ',
-      author: 'BMKG Bengkulu - Eyca Putri',
-      status: 'running',
-      timestamp: new Date().toISOString(),
-    };
+  getHello(): string {
+    return '<h1>SISNOMPEG Admin API</h1><p>Lihat dokumentasi di <a href="/api-docs">/api-docs</a></p>';
   }
 }
