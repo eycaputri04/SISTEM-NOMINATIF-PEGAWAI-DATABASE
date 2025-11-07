@@ -1,14 +1,18 @@
+import helmet from 'helmet';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
 import { waitForSupabaseReady } from './supabase/supabase.client';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
   // Pastikan Supabase siap
   await waitForSupabaseReady();
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.set('trust proxy', 1);
+  app.use(helmet());
 
   // Middleware untuk body parser
   app.use(json({ limit: '10mb' }));
