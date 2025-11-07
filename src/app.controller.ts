@@ -9,8 +9,4 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
-  @Get('api')
-  getApiInfo(): string {
-    return 'Ini adalah endpoint /api';
-  }
 }
