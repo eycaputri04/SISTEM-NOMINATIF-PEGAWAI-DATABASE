@@ -3,35 +3,34 @@ import { ConfigModule } from '@nestjs/config';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+
+// Import semua modul aktif
 import { AuthModule } from './auth/auth.module';
-import { JabatanController } from './jabatan/jabatan.controller';
-import { JabatanService } from './jabatan/jabatan.service';
-import { JabatanModule } from './jabatan/jabatan.module';
-import { PetugasService } from './petugas/petugas.service';
-import { PetugasModule } from './petugas/petugas.module';
+import { PegawaiModule } from './pegawai/pegawai.module';
+import { PendidikanModule } from './pendidikan/pendidikan.module';
+import { PenjenjanganModule } from './penjenjangan/penjenjangan.module';
 import { StrukturModule } from './struktur/struktur.module';
-import { AktivitasController } from './aktivitas/aktivitas.controller';
 import { AktivitasModule } from './aktivitas/aktivitas.module';
+import { CatatanKarirController } from './catatan-karir/catatan-karir.controller';
+import { CatatanKarirModule } from './catatan-karir/catatan-karir.module';
 
 @Module({
   imports: [
-    // Load .env file secara global
+    // Load environment variable secara global
     ConfigModule.forRoot({
       isGlobal: true,
     }),
 
-    // Modul-modul lainnya
+    // Modul-modul aktif
     AuthModule,
-
-    JabatanModule,
-
-    PetugasModule,
-
+    PegawaiModule,
+    PendidikanModule,
+    PenjenjanganModule,
     StrukturModule,
-
     AktivitasModule,
+    CatatanKarirModule,
   ],
-  controllers: [AppController, JabatanController, AktivitasController],
-  providers: [AppService, JabatanService, PetugasService],
+  controllers: [AppController, CatatanKarirController],
+  providers: [AppService],
 })
 export class AppModule {}

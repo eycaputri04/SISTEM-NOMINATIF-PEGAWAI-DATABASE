@@ -3,7 +3,7 @@ import { StrukturService } from './struktur.service';
 import { StrukturController } from './struktur.controller';
 
 @Module({
-  controllers: [StrukturController],
   providers: [StrukturService],
+  controllers: [StrukturController]
 })
 export class StrukturModule {}

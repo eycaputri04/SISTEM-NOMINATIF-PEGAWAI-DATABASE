@@ -1,68 +1,77 @@
 import {
   Controller,
-  Get,
   Post,
+  Get,
   Body,
   Param,
-  Delete,
   Put,
-  Headers,
+  Delete,
+  BadRequestException,
 } from '@nestjs/common';
 import { StrukturService } from './struktur.service';
 import { CreateStrukturDto } from './dto/create-struktur.dto';
 import { UpdateStrukturDto } from './dto/update-struktur.dto';
-import { ApiTags, ApiOperation, ApiParam, ApiHeader } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
-@ApiTags('struktur-organisasi')
-@Controller('struktur-organisasi')
+@ApiTags('Struktur')
+@Controller('struktur')
 export class StrukturController {
   constructor(private readonly strukturService: StrukturService) {}
 
+  // Tambah data struktur
+  @Post()
+  @ApiOperation({ summary: 'Tambah data struktur organisasi' })
+  @ApiResponse({ status: 201, description: 'Struktur berhasil ditambahkan' })
+  async create(@Body() body: CreateStrukturDto) {
+    try {
+      console.log('Data diterima:', body);
+      const result = await this.strukturService.create(body);
+      console.log('Hasil insert:', result);
+      return result;
+    } catch (error) {
+      console.error('Error detail:', error);
+      throw new BadRequestException('Gagal menambahkan struktur organisasi');
+    }
+  }
+
+  // Ambil semua data struktur
   @Get()
-  @ApiOperation({ summary: 'Ambil semua data struktur organisasi' })
+  @ApiOperation({ summary: 'Mengambil semua data struktur organisasi' })
+  @ApiResponse({ status: 200, description: 'Daftar semua struktur organisasi' })
   findAll() {
     return this.strukturService.findAll();
   }
 
-  @Get('count') 
-  @ApiOperation({ summary: 'Hitung total data struktur organisasi' })
+  // Ambil jumlah total struktur
+  @Get('count')
+  @ApiOperation({ summary: 'Mengambil jumlah total struktur' })
+  @ApiResponse({ status: 200, description: 'Total jumlah struktur' })
   getCount() {
     return this.strukturService.getCount();
   }
 
-  @Get(':ID_Struktur')
-  @ApiOperation({ summary: 'Ambil satu data struktur organisasi berdasarkan ID' })
-  @ApiParam({ name: 'ID_Struktur', description: 'ID Struktur Organisasi' })
-  findOne(@Param('ID_Struktur') ID_Struktur: string) {
-    return this.strukturService.findOne(ID_Struktur);
+  // Ambil data struktur berdasarkan ID
+  @Get(':id')
+  @ApiOperation({ summary: 'Mengambil data struktur berdasarkan ID' })
+  @ApiResponse({ status: 200, description: 'Data struktur ditemukan' })
+  @ApiResponse({ status: 404, description: 'Struktur tidak ditemukan' })
+  findOne(@Param('id') id: string) {
+    return this.strukturService.findOne(id);
   }
 
-  @Post()
-  @ApiOperation({ summary: 'Tambah data struktur organisasi' })
-  @ApiHeader({ name: 'user_id', description: 'ID pengguna yang melakukan aksi' })
-  create(
-    @Body() dto: CreateStrukturDto,
-    @Headers('user_id') user_id: string,
-  ) {
-    return this.strukturService.create(dto, user_id);
+  // Update data struktur
+  @Put(':id')
+  @ApiOperation({ summary: 'Memperbarui data struktur berdasarkan ID' })
+  @ApiResponse({ status: 200, description: 'Struktur berhasil diperbarui' })
+  update(@Param('id') id: string, @Body() dto: UpdateStrukturDto) {
+    return this.strukturService.update(id, dto);
   }
 
-  @Put(':ID_Struktur')
-  @ApiOperation({ summary: 'Update data struktur organisasi berdasarkan ID' })
-  @ApiParam({ name: 'ID_Struktur', description: 'ID Struktur Organisasi' })
-  @ApiHeader({ name: 'user_id', description: 'ID pengguna yang melakukan aksi' })
-  update(
-    @Param('ID_Struktur') ID_Struktur: string,
-    @Body() dto: UpdateStrukturDto,
-    @Headers('user_id') user_id: string,
-  ) {
-    return this.strukturService.update(ID_Struktur, dto, user_id);
-  }
-
-  @Delete(':ID_Struktur')
-  @ApiOperation({ summary: 'Hapus data struktur organisasi berdasarkan ID' })
-  @ApiParam({ name: 'ID_Struktur', description: 'ID Struktur Organisasi' })
-  remove(@Param('ID_Struktur') ID_Struktur: string) {
-    return this.strukturService.remove(ID_Struktur);
+  // Hapus data struktur
+  @Delete(':id')
+  @ApiOperation({ summary: 'Menghapus data struktur berdasarkan ID' })
+  @ApiResponse({ status: 200, description: 'Struktur berhasil dihapus' })
+  remove(@Param('id') id: string) {
+    return this.strukturService.remove(id);
   }
 }

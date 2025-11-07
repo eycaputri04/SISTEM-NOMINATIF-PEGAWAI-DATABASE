@@ -1,7 +1,7 @@
 import { supabase } from '../supabase/supabase.client';
 
 export async function logAktivitas(tipe: string, aksi: string, deskripsi: string) {
-  const { error } = await supabase.from('Aktivitas').insert([
+  const { error } = await supabase.from('aktivitas').insert([
     {
       tipe, 
       aksi,
