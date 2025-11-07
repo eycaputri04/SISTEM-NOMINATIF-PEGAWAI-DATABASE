@@ -20,7 +20,10 @@ async function bootstrap() {
 
   // CORS
   app.enableCors({
-    origin: true,
+    origin: [
+    'http://localhost:3000',
+    'https://sisnompeg-admin.vercel.app', // domain FE kamu di Vercel
+  ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
