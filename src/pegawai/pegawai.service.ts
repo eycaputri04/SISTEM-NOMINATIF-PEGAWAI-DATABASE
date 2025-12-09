@@ -205,4 +205,49 @@ export class PegawaiService {
       upcomingKGB,
     };
   }
+
+  async getKGBNotif() {
+    const today = new Date();
+
+    const { data: pegawai, error } = await supabase
+      .from(this.table)
+      .select('NIP, Nama, KGB_Berikutnya');
+
+    if (error) {
+      throw new BadRequestException('Gagal mengambil data KGB');
+    }
+
+    if (!pegawai) return [];
+
+    const result = pegawai
+      .filter((p) => p.KGB_Berikutnya)
+      .map((p) => {
+        const kgbDate = new Date(p.KGB_Berikutnya);
+        const diffTime = kgbDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        let status = '';
+
+        if (diffDays < 0) status = 'terlewat'; // sudah lewat
+        else if (diffDays === 0) status = 'hari ini'; // jatuh tempo hari ini
+        else if (diffDays <= 30) status = 'segera'; // akan jatuh tempo
+        else status = 'aman';
+
+        return {
+          NIP: p.NIP,
+          Nama: p.Nama,
+          KGB_Berikutnya: p.KGB_Berikutnya,
+          sisa_hari: diffDays,
+          status,
+        };
+      })
+      .filter((x) => x.status !== 'aman'); // hanya notifikasi penting
+
+    return {
+      message: 'Notifikasi KGB ditemukan',
+      total_notif: result.length,
+      data: result,
+    };
+  }
+
 }
