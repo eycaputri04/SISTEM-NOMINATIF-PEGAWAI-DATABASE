@@ -7,6 +7,7 @@ import { logAktivitas } from '../utils/logAktivitas';
 @Injectable()
 export class PegawaiService {
   private readonly table = 'pegawai';
+  private readonly ADMIN_EMAIL = 'eycaputri04@gmail.com';
 
   // ================== HELPER ==================
   private addTwoYears(dateStr: string): string {
@@ -20,6 +21,7 @@ export class PegawaiService {
     subject: string;
     text: string;
   }) {
+    // nanti ganti dengan mailer asli
     console.log('EMAIL TERKIRIM:', payload);
   }
 
@@ -53,19 +55,27 @@ export class PegawaiService {
       ...dto,
       NIP: dto.NIP ?? (dto as any).nip,
       Nama: dto.Nama ?? (dto as any).nama,
-      Tempat_Tanggal_Lahir: dto.Tempat_Tanggal_Lahir ?? (dto as any).tempat_tanggal_lahir,
-      Pendidikan_Terakhir: dto.Pendidikan_Terakhir ?? (dto as any).pendidikan_terakhir,
-      Pangkat_Golongan: dto.Pangkat_Golongan ?? (dto as any).pangkat_golongan,
-      KGB_Berikutnya: dto.KGB_Berikutnya ?? (dto as any).kgb_berikutnya,
+      Tempat_Tanggal_Lahir:
+        dto.Tempat_Tanggal_Lahir ?? (dto as any).tempat_tanggal_lahir,
+      Pendidikan_Terakhir:
+        dto.Pendidikan_Terakhir ?? (dto as any).pendidikan_terakhir,
+      Pangkat_Golongan:
+        dto.Pangkat_Golongan ?? (dto as any).pangkat_golongan,
+      KGB_Berikutnya:
+        dto.KGB_Berikutnya ?? (dto as any).kgb_berikutnya,
       TMT: dto.TMT ?? (dto as any).tmt,
-      Jenis_Kelamin: dto.Jenis_Kelamin ?? (dto as any).jenis_kelamin,
+      Jenis_Kelamin:
+        dto.Jenis_Kelamin ?? (dto as any).jenis_kelamin,
       Agama: dto.Agama ?? (dto as any).agama,
-      Status_Kepegawaian: dto.Status_Kepegawaian ?? (dto as any).status_kepegawaian,
-      Gaji_Pokok: dto.Gaji_Pokok ?? (dto as any).gaji_pokok,
-      Jumlah_Anak: dto.Jumlah_Anak ?? (dto as any).jumlah_anak,
+      Status_Kepegawaian:
+        dto.Status_Kepegawaian ?? (dto as any).status_kepegawaian,
+      Gaji_Pokok:
+        dto.Gaji_Pokok ?? (dto as any).gaji_pokok,
+      Jumlah_Anak:
+        dto.Jumlah_Anak ?? (dto as any).jumlah_anak,
     };
 
-    // Jika KGB diedit manual → reset flag
+    // Jika KGB diedit manual → reset notifikasi
     if (mappedDto.KGB_Berikutnya) {
       mappedDto.kgb_notified = false;
     }
@@ -136,7 +146,7 @@ export class PegawaiService {
   }
 
   // ================== PROSES KGB OTOMATIS ==================
-  async processKGBOtomatis(adminEmail: string) {
+  async processKGBOtomatis() {
     const today = new Date().toISOString().split('T')[0];
 
     const { data: pegawai } = await supabase
@@ -148,11 +158,14 @@ export class PegawaiService {
     for (const p of pegawai ?? []) {
       const kgbBaru = this.addTwoYears(p.KGB_Berikutnya);
 
-      await supabase.from(this.table).update({
-        kgb_terakhir: p.KGB_Berikutnya,
-        KGB_Berikutnya: kgbBaru,
-        kgb_notified: true,
-      }).eq('NIP', p.NIP);
+      await supabase
+        .from(this.table)
+        .update({
+          kgb_terakhir: p.KGB_Berikutnya,
+          KGB_Berikutnya: kgbBaru,
+          kgb_notified: true,
+        })
+        .eq('NIP', p.NIP);
 
       await logAktivitas(
         'Pegawai',
@@ -161,8 +174,8 @@ export class PegawaiService {
       );
 
       await this.sendEmail({
-        to: adminEmail,
-        subject: 'KGB Pegawai Diproses',
+        to: this.ADMIN_EMAIL,
+        subject: 'Notifikasi Kenaikan Gaji Berkala (KGB)',
         text: `
           Pegawai : ${p.Nama}
           NIP      : ${p.NIP}
@@ -187,7 +200,7 @@ export class PegawaiService {
       .map(p => {
         const diffDays = Math.ceil(
           (new Date(p.KGB_Berikutnya).getTime() - today.getTime()) /
-          (1000 * 60 * 60 * 24),
+            (1000 * 60 * 60 * 24),
         );
 
         let status = 'aman';
@@ -202,7 +215,7 @@ export class PegawaiService {
     return { total: result.length, data: result };
   }
 
-  // ================== Dashboard ==================
+  // ================== DASHBOARD ==================
   async getDashboardStats() {
     const { data: pegawai, error } = await supabase
       .from(this.table)

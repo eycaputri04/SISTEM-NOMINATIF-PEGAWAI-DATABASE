@@ -118,4 +118,18 @@ export class PegawaiController {
     }
   }
 
+  // ================== Proses KGB Otomatis ==================
+  @Get('kgb/proses')
+  @ApiOperation({ summary: 'Memproses KGB otomatis (update + email)' })
+  @ApiResponse({ status: 200, description: 'KGB berhasil diproses' })
+  async prosesKGB() {
+    try {
+      return await this.pegawaiService.processKGBOtomatis();
+    } catch (error: any) {
+      throw new BadRequestException(
+        error.message || 'Gagal memproses KGB otomatis',
+      );
+    }
+  }
+
 }
