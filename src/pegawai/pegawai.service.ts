@@ -52,7 +52,6 @@ export class PegawaiService {
   // ================== UPDATE ==================
   async update(nip: string, dto: UpdatePegawaiDto) {
     const mappedDto: any = {
-      ...dto,
       NIP: dto.NIP ?? (dto as any).nip,
       Nama: dto.Nama ?? (dto as any).nama,
       Tempat_Tanggal_Lahir:
@@ -66,7 +65,8 @@ export class PegawaiService {
       TMT: dto.TMT ?? (dto as any).tmt,
       Jenis_Kelamin:
         dto.Jenis_Kelamin ?? (dto as any).jenis_kelamin,
-      Agama: dto.Agama ?? (dto as any).agama,
+      Agama:
+        dto.Agama ?? (dto as any).agama,
       Status_Kepegawaian:
         dto.Status_Kepegawaian ?? (dto as any).status_kepegawaian,
       Gaji_Pokok:
@@ -75,7 +75,11 @@ export class PegawaiService {
         dto.Jumlah_Anak ?? (dto as any).jumlah_anak,
     };
 
-    // Jika KGB diedit manual → reset notifikasi
+    // hapus undefined supaya Supabase bersih
+    Object.keys(mappedDto).forEach(
+      key => mappedDto[key] === undefined && delete mappedDto[key],
+    );
+
     if (mappedDto.KGB_Berikutnya) {
       mappedDto.kgb_notified = false;
     }
