@@ -8,10 +8,26 @@ import { logAktivitas } from '../utils/logAktivitas';
 export class PegawaiService {
   private readonly table = 'pegawai';
 
-  async create(createPegawaiDto: CreatePegawaiDto) {
+  // ================== HELPER ==================
+  private addTwoYears(dateStr: string): string {
+    const d = new Date(dateStr);
+    d.setFullYear(d.getFullYear() + 2);
+    return d.toISOString().split('T')[0];
+  }
+
+  private async sendEmail(payload: {
+    to: string;
+    subject: string;
+    text: string;
+  }) {
+    console.log('EMAIL TERKIRIM:', payload);
+  }
+
+  // ================== CREATE ==================
+  async create(dto: CreatePegawaiDto) {
     const { data, error } = await supabase
       .from(this.table)
-      .insert([createPegawaiDto])
+      .insert([{ ...dto, kgb_notified: false }])
       .select()
       .maybeSingle();
 
@@ -19,63 +35,40 @@ export class PegawaiService {
       if (error.code === '23505') {
         throw new BadRequestException('NIP sudah terdaftar');
       }
-      throw new BadRequestException(`Gagal menambahkan pegawai: ${error.message}`);
-    }
-
-    if (!data) {
-      throw new BadRequestException('Pegawai gagal ditambahkan');
+      throw new BadRequestException(error.message);
     }
 
     await logAktivitas(
       'Pegawai',
       'Menambahkan pegawai',
-      `Menambahkan pegawai ${createPegawaiDto.Nama}`
+      `Menambahkan pegawai ${dto.Nama}`,
     );
 
-    return {
-      message: 'Pegawai berhasil ditambahkan',
-      data,
-    };
+    return { message: 'Pegawai berhasil ditambahkan', data };
   }
 
-  async update(nip: string, updateDto: UpdatePegawaiDto) {
-    const mappedDto = {
-      ...updateDto,
-      NIP: (updateDto as any).NIP ?? (updateDto as any).nip,
-      Nama: (updateDto as any).Nama ?? (updateDto as any).nama,
-      Tempat_Tanggal_Lahir:
-        (updateDto as any).Tempat_Tanggal_Lahir ?? (updateDto as any).tempat_tanggal_lahir,
-      Pendidikan_Terakhir:
-        (updateDto as any).Pendidikan_Terakhir ?? (updateDto as any).pendidikan_terakhir,
-      Pangkat_Golongan:
-        (updateDto as any).Pangkat_Golongan ?? (updateDto as any).pangkat_golongan,
-      KGB_Berikutnya:
-        (updateDto as any).KGB_Berikutnya ?? (updateDto as any).kgb_berikutnya,
-      TMT: (updateDto as any).TMT ?? (updateDto as any).tmt,
-      Jenis_Kelamin:
-        (updateDto as any).Jenis_Kelamin ?? (updateDto as any).jenis_kelamin,
-      Agama: (updateDto as any).Agama ?? (updateDto as any).agama,
-      Status_Kepegawaian:
-        (updateDto as any).Status_Kepegawaian ?? (updateDto as any).status_kepegawaian,
-      Gaji_Pokok:
-        (updateDto as any).Gaji_Pokok ?? (updateDto as any).gaji_pokok,
-      Jumlah_Anak:
-        (updateDto as any).Jumlah_Anak ?? (updateDto as any).jumlah_anak,
+  // ================== UPDATE ==================
+  async update(nip: string, dto: UpdatePegawaiDto) {
+    const mappedDto: any = {
+      ...dto,
+      NIP: dto.NIP ?? (dto as any).nip,
+      Nama: dto.Nama ?? (dto as any).nama,
+      Tempat_Tanggal_Lahir: dto.Tempat_Tanggal_Lahir ?? (dto as any).tempat_tanggal_lahir,
+      Pendidikan_Terakhir: dto.Pendidikan_Terakhir ?? (dto as any).pendidikan_terakhir,
+      Pangkat_Golongan: dto.Pangkat_Golongan ?? (dto as any).pangkat_golongan,
+      KGB_Berikutnya: dto.KGB_Berikutnya ?? (dto as any).kgb_berikutnya,
+      TMT: dto.TMT ?? (dto as any).tmt,
+      Jenis_Kelamin: dto.Jenis_Kelamin ?? (dto as any).jenis_kelamin,
+      Agama: dto.Agama ?? (dto as any).agama,
+      Status_Kepegawaian: dto.Status_Kepegawaian ?? (dto as any).status_kepegawaian,
+      Gaji_Pokok: dto.Gaji_Pokok ?? (dto as any).gaji_pokok,
+      Jumlah_Anak: dto.Jumlah_Anak ?? (dto as any).jumlah_anak,
     };
 
-    delete (mappedDto as any).nip;
-    delete (mappedDto as any).nama;
-    delete (mappedDto as any).tempat_tanggal_lahir;
-    delete (mappedDto as any).pendidikan_terakhir;
-    delete (mappedDto as any).pangkat_golongan;
-    delete (mappedDto as any).kgb_berikutnya;
-    delete (mappedDto as any).tmt;
-    delete (mappedDto as any).jenis_kelamin;
-    delete (mappedDto as any).agama;
-    delete (mappedDto as any).status_kepegawaian;
-    delete (mappedDto as any).gaji_pokok;
-    delete (mappedDto as any).jumlah_anak;
-    delete (mappedDto as any).Updated_At;
+    // Jika KGB diedit manual → reset flag
+    if (mappedDto.KGB_Berikutnya) {
+      mappedDto.kgb_notified = false;
+    }
 
     const { data, error } = await supabase
       .from(this.table)
@@ -84,120 +77,157 @@ export class PegawaiService {
       .select()
       .maybeSingle();
 
-    if (error) {
-      if (error.code === '23505') {
-        throw new BadRequestException('NIP sudah terdaftar');
-      }
-      throw new BadRequestException(`Gagal memperbarui pegawai: ${error.message}`);
-    }
-
-    if (!data) {
-      throw new BadRequestException('Pegawai tidak ditemukan');
-    }
+    if (error) throw new BadRequestException(error.message);
+    if (!data) throw new BadRequestException('Pegawai tidak ditemukan');
 
     await logAktivitas(
       'Pegawai',
-      'Memperbarui data pegawai',
-      `Memperbarui data pegawai ${data.Nama}`
+      'Update Pegawai',
+      `Memperbarui data pegawai ${data.Nama}`,
     );
 
-    return {
-      message: 'Pegawai berhasil diperbarui',
-      data,
-    };
+    return { message: 'Pegawai berhasil diperbarui', data };
   }
 
+  // ================== READ ==================
   async findAll() {
     const { data, error } = await supabase.from(this.table).select('*');
-    if (error) {
-      throw new BadRequestException('Gagal mengambil data pegawai');
-    }
+    if (error) throw new BadRequestException(error.message);
     return data;
   }
 
   async findOne(nip: string) {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from(this.table)
       .select('*')
       .eq('NIP', nip)
       .maybeSingle();
 
-    if (error) {
-      throw new BadRequestException('Gagal mengambil data pegawai');
-    }
-
-    if (!data) {
-      throw new BadRequestException('Pegawai tidak ditemukan');
-    }
-
+    if (!data) throw new BadRequestException('Pegawai tidak ditemukan');
     return data;
   }
 
   async getCount() {
-    const { count, error } = await supabase
+    const { count } = await supabase
       .from(this.table)
       .select('*', { count: 'exact', head: true });
-
-    if (error) {
-      throw new BadRequestException('Gagal mengambil total pegawai');
-    }
 
     return { count: count ?? 0 };
   }
 
   async remove(nip: string) {
-    // Ambil data pegawai terlebih dahulu sebelum dihapus
-    const { data: existingPegawai, error: fetchError } = await supabase
+    const { data } = await supabase
       .from(this.table)
-      .select("Nama")
-      .eq("NIP", nip)
+      .select('Nama')
+      .eq('NIP', nip)
       .single();
 
-    if (fetchError || !existingPegawai) {
-      throw new BadRequestException("Pegawai tidak ditemukan");
-    }
+    if (!data) throw new BadRequestException('Pegawai tidak ditemukan');
 
-    // Hapus data pegawai
-    const { error: deleteError } = await supabase
-      .from(this.table)
-      .delete()
-      .eq("NIP", nip);
+    await supabase.from(this.table).delete().eq('NIP', nip);
 
-    if (deleteError) {
-      throw new BadRequestException("Gagal menghapus pegawai");
-    }
-
-    // Catat aktivitas menggunakan nama pegawai
     await logAktivitas(
-      "Pegawai",
-      "Menghapus data pegawai",
-      `Menghapus data pegawai ${existingPegawai.Nama}`
+      'Pegawai',
+      'Hapus Pegawai',
+      `Menghapus data pegawai ${data.Nama}`,
     );
 
-    return { message: "Pegawai berhasil dihapus" };
+    return { message: 'Pegawai berhasil dihapus' };
   }
 
-  //  Fitur Dashboard 
-  async getDashboardStats() {
-    const { data: pegawai, error } = await supabase.from(this.table).select('*');
-    if (error) {
-      throw new BadRequestException('Gagal mengambil data pegawai untuk dashboard');
+  // ================== PROSES KGB OTOMATIS ==================
+  async processKGBOtomatis(adminEmail: string) {
+    const today = new Date().toISOString().split('T')[0];
+
+    const { data: pegawai } = await supabase
+      .from(this.table)
+      .select('*')
+      .lte('KGB_Berikutnya', today)
+      .eq('kgb_notified', false);
+
+    for (const p of pegawai ?? []) {
+      const kgbBaru = this.addTwoYears(p.KGB_Berikutnya);
+
+      await supabase.from(this.table).update({
+        kgb_terakhir: p.KGB_Berikutnya,
+        KGB_Berikutnya: kgbBaru,
+        kgb_notified: true,
+      }).eq('NIP', p.NIP);
+
+      await logAktivitas(
+        'Pegawai',
+        'KGB Otomatis',
+        `KGB ${p.Nama} diperbarui ke ${kgbBaru}`,
+      );
+
+      await this.sendEmail({
+        to: adminEmail,
+        subject: 'KGB Pegawai Diproses',
+        text: `
+          Pegawai : ${p.Nama}
+          NIP      : ${p.NIP}
+          KGB Lama : ${p.KGB_Berikutnya}
+          KGB Baru : ${kgbBaru}
+        `,
+      });
     }
 
-    // Hitung jumlah berdasarkan gender
+    return { total_diproses: pegawai?.length ?? 0 };
+  }
+
+  // ================== NOTIFIKASI ==================
+  async getKGBNotif() {
+    const today = new Date();
+
+    const { data } = await supabase
+      .from(this.table)
+      .select('NIP, Nama, KGB_Berikutnya');
+
+    const result = (data ?? [])
+      .map(p => {
+        const diffDays = Math.ceil(
+          (new Date(p.KGB_Berikutnya).getTime() - today.getTime()) /
+          (1000 * 60 * 60 * 24),
+        );
+
+        let status = 'aman';
+        if (diffDays < 0) status = 'terlewat';
+        else if (diffDays === 0) status = 'hari ini';
+        else if (diffDays <= 30) status = 'segera';
+
+        return { ...p, sisa_hari: diffDays, status };
+      })
+      .filter(p => p.status !== 'aman');
+
+    return { total: result.length, data: result };
+  }
+
+  // ================== Dashboard ==================
+  async getDashboardStats() {
+    const { data: pegawai, error } = await supabase
+      .from(this.table)
+      .select('*');
+
+    if (error) {
+      throw new BadRequestException('Gagal mengambil data dashboard');
+    }
+
     const genderCount = pegawai.reduce(
       (acc, p) => {
-        if (p.Jenis_Kelamin?.toLowerCase() === 'laki-laki') acc.lakiLaki += 1;
-        else if (p.Jenis_Kelamin?.toLowerCase() === 'perempuan') acc.perempuan += 1;
+        if (p.Jenis_Kelamin?.toLowerCase() === 'laki-laki') acc.lakiLaki++;
+        else if (p.Jenis_Kelamin?.toLowerCase() === 'perempuan') acc.perempuan++;
         return acc;
       },
-      { lakiLaki: 0, perempuan: 0 }
+      { lakiLaki: 0, perempuan: 0 },
     );
 
-    // Ambil 2 pegawai dengan KGB_Berikutnya terdekat
     const upcomingKGB = pegawai
       .filter(p => p.KGB_Berikutnya)
-      .sort((a, b) => new Date(a.KGB_Berikutnya).getTime() - new Date(b.KGB_Berikutnya).getTime())
+      .sort(
+        (a, b) =>
+          new Date(a.KGB_Berikutnya).getTime() -
+          new Date(b.KGB_Berikutnya).getTime(),
+      )
       .slice(0, 2);
 
     return {
@@ -205,49 +235,4 @@ export class PegawaiService {
       upcomingKGB,
     };
   }
-
-  async getKGBNotif() {
-    const today = new Date();
-
-    const { data: pegawai, error } = await supabase
-      .from(this.table)
-      .select('NIP, Nama, KGB_Berikutnya');
-
-    if (error) {
-      throw new BadRequestException('Gagal mengambil data KGB');
-    }
-
-    if (!pegawai) return [];
-
-    const result = pegawai
-      .filter((p) => p.KGB_Berikutnya)
-      .map((p) => {
-        const kgbDate = new Date(p.KGB_Berikutnya);
-        const diffTime = kgbDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        let status = '';
-
-        if (diffDays < 0) status = 'terlewat'; // sudah lewat
-        else if (diffDays === 0) status = 'hari ini'; // jatuh tempo hari ini
-        else if (diffDays <= 30) status = 'segera'; // akan jatuh tempo
-        else status = 'aman';
-
-        return {
-          NIP: p.NIP,
-          Nama: p.Nama,
-          KGB_Berikutnya: p.KGB_Berikutnya,
-          sisa_hari: diffDays,
-          status,
-        };
-      })
-      .filter((x) => x.status !== 'aman'); // hanya notifikasi penting
-
-    return {
-      message: 'Notifikasi KGB ditemukan',
-      total_notif: result.length,
-      data: result,
-    };
-  }
-
 }

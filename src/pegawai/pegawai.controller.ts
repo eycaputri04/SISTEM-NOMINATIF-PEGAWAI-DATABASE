@@ -106,4 +106,16 @@ export class PegawaiController {
       throw new BadRequestException(error.message || 'Gagal mengambil statistik pegawai');
     }
   }
+
+  @Get('kgb/notifikasi')
+  @ApiOperation({ summary: 'Notifikasi otomatis KGB terdekat atau terlewat' })
+  @ApiResponse({ status: 200, description: 'Daftar pegawai dengan KGB jatuh tempo' })
+  async getKGBNotif() {
+    try {
+      return await this.pegawaiService.getKGBNotif();
+    } catch (error: any) {
+      throw new BadRequestException(error.message || 'Gagal mengambil notifikasi KGB');
+    }
+  }
+
 }
