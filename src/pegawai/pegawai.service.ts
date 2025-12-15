@@ -217,6 +217,10 @@ export class PegawaiService {
 
   // ================== DASHBOARD ==================
   async getDashboardStats() {
+    // PROSES KGB OTOMATIS DULU
+    await this.processKGBOtomatis();
+
+    // BARU AMBIL DATA TERBARU
     const { data: pegawai, error } = await supabase
       .from(this.table)
       .select('*');
@@ -228,14 +232,22 @@ export class PegawaiService {
     const genderCount = pegawai.reduce(
       (acc, p) => {
         if (p.Jenis_Kelamin?.toLowerCase() === 'laki-laki') acc.lakiLaki++;
-        else if (p.Jenis_Kelamin?.toLowerCase() === 'perempuan') acc.perempuan++;
+        else if (p.Jenis_Kelamin?.toLowerCase() === 'perempuan')
+          acc.perempuan++;
         return acc;
       },
       { lakiLaki: 0, perempuan: 0 },
     );
 
+    // FILTER KGB YANG SUDAH LEWAT TIDAK IKUT
+    const today = new Date();
+
     const upcomingKGB = pegawai
-      .filter(p => p.KGB_Berikutnya)
+      .filter(
+        p =>
+          p.KGB_Berikutnya &&
+          new Date(p.KGB_Berikutnya) >= today,
+      )
       .sort(
         (a, b) =>
           new Date(a.KGB_Berikutnya).getTime() -
