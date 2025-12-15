@@ -3,16 +3,11 @@ import { supabase } from '../supabase/supabase.client';
 import { CreatePegawaiDto } from './dto/create-pegawai.dto';
 import { UpdatePegawaiDto } from './dto/update-pegawai.dto';
 import { logAktivitas } from '../utils/logAktivitas';
-import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class PegawaiService {
   private readonly table = 'pegawai';
   private readonly ADMIN_EMAIL = 'eycaputri04@gmail.com';
-
-  constructor(
-    private readonly mailerService: MailerService,
-  ) {}
 
   // ================== HELPER ==================
   private addTwoYears(dateStr: string): string {
@@ -26,11 +21,8 @@ export class PegawaiService {
     subject: string;
     text: string;
   }) {
-    await this.mailerService.sendMail({
-      to: payload.to,
-      subject: payload.subject,
-      text: payload.text,
-    });
+    // nanti ganti dengan mailer asli
+    console.log('EMAIL TERKIRIM:', payload);
   }
 
   // ================== CREATE ==================
@@ -83,7 +75,7 @@ export class PegawaiService {
         dto.Jumlah_Anak ?? (dto as any).jumlah_anak,
     };
 
-    // reset notifikasi kalau KGB diedit manual
+    // Jika KGB diedit manual → reset notifikasi
     if (mappedDto.KGB_Berikutnya) {
       mappedDto.kgb_notified = false;
     }
@@ -125,6 +117,34 @@ export class PegawaiService {
     return data;
   }
 
+  async getCount() {
+    const { count } = await supabase
+      .from(this.table)
+      .select('*', { count: 'exact', head: true });
+
+    return { count: count ?? 0 };
+  }
+
+  async remove(nip: string) {
+    const { data } = await supabase
+      .from(this.table)
+      .select('Nama')
+      .eq('NIP', nip)
+      .single();
+
+    if (!data) throw new BadRequestException('Pegawai tidak ditemukan');
+
+    await supabase.from(this.table).delete().eq('NIP', nip);
+
+    await logAktivitas(
+      'Pegawai',
+      'Hapus Pegawai',
+      `Menghapus data pegawai ${data.Nama}`,
+    );
+
+    return { message: 'Pegawai berhasil dihapus' };
+  }
+
   // ================== PROSES KGB OTOMATIS ==================
   async processKGBOtomatis() {
     const today = new Date().toISOString().split('T')[0];
@@ -153,15 +173,14 @@ export class PegawaiService {
         `KGB ${p.Nama} diperbarui ke ${kgbBaru}`,
       );
 
-      // EMAIL DIKIRIM KE ADMIN
       await this.sendEmail({
         to: this.ADMIN_EMAIL,
         subject: 'Notifikasi Kenaikan Gaji Berkala (KGB)',
         text: `
           Pegawai : ${p.Nama}
-          NIP     : ${p.NIP}
-          KGB Lama: ${p.KGB_Berikutnya}
-          KGB Baru: ${kgbBaru}
+          NIP      : ${p.NIP}
+          KGB Lama : ${p.KGB_Berikutnya}
+          KGB Baru : ${kgbBaru}
         `,
       });
     }
@@ -169,11 +188,39 @@ export class PegawaiService {
     return { total_diproses: pegawai?.length ?? 0 };
   }
 
+  // ================== NOTIFIKASI ==================
+  async getKGBNotif() {
+    const today = new Date();
+
+    const { data } = await supabase
+      .from(this.table)
+      .select('NIP, Nama, KGB_Berikutnya');
+
+    const result = (data ?? [])
+      .map(p => {
+        const diffDays = Math.ceil(
+          (new Date(p.KGB_Berikutnya).getTime() - today.getTime()) /
+            (1000 * 60 * 60 * 24),
+        );
+
+        let status = 'aman';
+        if (diffDays < 0) status = 'terlewat';
+        else if (diffDays === 0) status = 'hari ini';
+        else if (diffDays <= 30) status = 'segera';
+
+        return { ...p, sisa_hari: diffDays, status };
+      })
+      .filter(p => p.status !== 'aman');
+
+    return { total: result.length, data: result };
+  }
+
   // ================== DASHBOARD ==================
   async getDashboardStats() {
-    // proses KGB otomatis setiap dashboard dibuka
+    // PROSES KGB OTOMATIS DULU
     await this.processKGBOtomatis();
 
+    // BARU AMBIL DATA TERBARU
     const { data: pegawai, error } = await supabase
       .from(this.table)
       .select('*');
@@ -192,10 +239,15 @@ export class PegawaiService {
       { lakiLaki: 0, perempuan: 0 },
     );
 
+    // FILTER KGB YANG SUDAH LEWAT TIDAK IKUT
     const today = new Date();
 
     const upcomingKGB = pegawai
-      .filter(p => p.KGB_Berikutnya && new Date(p.KGB_Berikutnya) >= today)
+      .filter(
+        p =>
+          p.KGB_Berikutnya &&
+          new Date(p.KGB_Berikutnya) >= today,
+      )
       .sort(
         (a, b) =>
           new Date(a.KGB_Berikutnya).getTime() -
