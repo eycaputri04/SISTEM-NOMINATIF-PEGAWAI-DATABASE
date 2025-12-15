@@ -18,118 +18,64 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 export class PegawaiController {
   constructor(private readonly pegawaiService: PegawaiService) {}
 
-  // ================== Create Pegawai ==================
+  // ================== CREATE ==================
   @Post()
   @ApiOperation({ summary: 'Menambahkan pegawai baru' })
-  @ApiResponse({ status: 201, description: 'Pegawai berhasil ditambahkan' })
   async create(@Body() body: CreatePegawaiDto) {
-    try {
-      console.log('Data diterima:', body);
-      const result = await this.pegawaiService.create(body);
-      console.log('Hasil insert:', result);
-      return result;
-    } catch (error: any) {
-      console.error('Error detail:', error);
-      throw new BadRequestException(error.message || 'Gagal menambahkan pegawai');
-    }
+    return this.pegawaiService.create(body);
   }
 
-  // ================== Ambil Semua Pegawai ==================
+  // ================== READ ALL ==================
   @Get()
   @ApiOperation({ summary: 'Mengambil semua data pegawai' })
-  @ApiResponse({ status: 200, description: 'Daftar semua pegawai' })
   async findAll() {
-    try {
-      return await this.pegawaiService.findAll();
-    } catch (error: any) {
-      throw new BadRequestException(error.message || 'Gagal mengambil data pegawai');
-    }
+    return this.pegawaiService.findAll();
   }
 
-  // ================== Ambil Count Pegawai ==================
+  // ================== COUNT ==================
   @Get('count')
   @ApiOperation({ summary: 'Mengambil jumlah total pegawai' })
-  @ApiResponse({ status: 200, description: 'Total jumlah pegawai' })
   async getCount() {
-    try {
-      return await this.pegawaiService.getCount();
-    } catch (error: any) {
-      throw new BadRequestException(error.message || 'Gagal mengambil total pegawai');
-    }
+    return this.pegawaiService.getCount();
   }
 
-  // ================== Ambil Pegawai Berdasarkan NIP ==================
+  // ================== DASHBOARD ==================
+  @Get('dashboard/stats')
+  @ApiOperation({ summary: 'Statistik pegawai untuk dashboard' })
+  async getDashboardStats() {
+    return this.pegawaiService.getDashboardStats();
+  }
+
+  // ================== KGB NOTIFIKASI ==================
+  @Get('kgb/notifikasi')
+  @ApiOperation({ summary: 'Notifikasi KGB terdekat atau terlewat' })
+  async getKGBNotif() {
+    return this.pegawaiService.getKGBNotif();
+  }
+
+  // ================== PROSES KGB OTOMATIS ==================
+  @Get('kgb/proses')
+    @ApiOperation({ summary: 'Memproses KGB otomatis' })
+    async prosesKGB() {
+      return this.pegawaiService.processKGBOtomatis();
+    }
+
+  // ================== BY NIP (PALING BAWAH) ==================
   @Get(':nip')
   @ApiOperation({ summary: 'Mengambil data pegawai berdasarkan NIP' })
-  @ApiResponse({ status: 200, description: 'Data pegawai ditemukan' })
-  @ApiResponse({ status: 404, description: 'Pegawai tidak ditemukan' })
   async findOne(@Param('nip') nip: string) {
-    try {
-      return await this.pegawaiService.findOne(nip);
-    } catch (error: any) {
-      throw new BadRequestException(error.message || 'Pegawai tidak ditemukan');
-    }
+    return this.pegawaiService.findOne(nip);
   }
 
-  // ================== Update Pegawai ==================
   @Put(':nip')
-  @ApiOperation({ summary: 'Memperbarui data pegawai berdasarkan NIP' })
-  @ApiResponse({ status: 200, description: 'Pegawai berhasil diperbarui' })
+  @ApiOperation({ summary: 'Update data pegawai' })
   async update(@Param('nip') nip: string, @Body() dto: UpdatePegawaiDto) {
-    try {
-      return await this.pegawaiService.update(nip, dto);
-    } catch (error: any) {
-      throw new BadRequestException(error.message || 'Gagal memperbarui pegawai');
-    }
+    return this.pegawaiService.update(nip, dto);
   }
 
-  // ================== Delete Pegawai ==================
   @Delete(':nip')
-  @ApiOperation({ summary: 'Menghapus pegawai berdasarkan NIP' })
-  @ApiResponse({ status: 200, description: 'Pegawai berhasil dihapus' })
+  @ApiOperation({ summary: 'Hapus data pegawai' })
   async remove(@Param('nip') nip: string) {
-    try {
-      return await this.pegawaiService.remove(nip);
-    } catch (error: any) {
-      throw new BadRequestException(error.message || 'Gagal menghapus pegawai');
-    }
+    return this.pegawaiService.remove(nip);
   }
-
-  // ================== Dashboard Stats ==================
-  @Get('dashboard/stats')
-  @ApiOperation({ summary: 'Mengambil statistik pegawai untuk dashboard' })
-  @ApiResponse({ status: 200, description: 'Statistik pegawai berhasil diambil' })
-  async getDashboardStats() {
-    try {
-      return await this.pegawaiService.getDashboardStats();
-    } catch (error: any) {
-      throw new BadRequestException(error.message || 'Gagal mengambil statistik pegawai');
-    }
-  }
-
-  @Get('kgb/notifikasi')
-  @ApiOperation({ summary: 'Notifikasi otomatis KGB terdekat atau terlewat' })
-  @ApiResponse({ status: 200, description: 'Daftar pegawai dengan KGB jatuh tempo' })
-  async getKGBNotif() {
-    try {
-      return await this.pegawaiService.getKGBNotif();
-    } catch (error: any) {
-      throw new BadRequestException(error.message || 'Gagal mengambil notifikasi KGB');
-    }
-  }
-
-  // ================== Proses KGB Otomatis ==================
-  @Get('kgb/proses')
-  @ApiOperation({ summary: 'Memproses KGB otomatis (update + email)' })
-  @ApiResponse({ status: 200, description: 'KGB berhasil diproses' })
-  async prosesKGB() {
-    try {
-      return await this.pegawaiService.processKGBOtomatis();
-    } catch (error: any) {
-      throw new BadRequestException(
-        error.message || 'Gagal memproses KGB otomatis',
-      );
-    }
-  }
-
 }
