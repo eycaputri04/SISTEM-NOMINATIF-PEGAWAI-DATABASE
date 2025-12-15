@@ -6,12 +6,11 @@ import {
   Param,
   Put,
   Delete,
-  BadRequestException,
 } from '@nestjs/common';
 import { PegawaiService } from './pegawai.service';
 import { CreatePegawaiDto } from './dto/create-pegawai.dto';
 import { UpdatePegawaiDto } from './dto/update-pegawai.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Pegawai')
 @Controller('pegawai')
@@ -32,13 +31,6 @@ export class PegawaiController {
     return this.pegawaiService.findAll();
   }
 
-  // ================== COUNT ==================
-  @Get('count')
-  @ApiOperation({ summary: 'Mengambil jumlah total pegawai' })
-  async getCount() {
-    return this.pegawaiService.getCount();
-  }
-
   // ================== DASHBOARD ==================
   @Get('dashboard/stats')
   @ApiOperation({ summary: 'Statistik pegawai untuk dashboard' })
@@ -46,36 +38,27 @@ export class PegawaiController {
     return this.pegawaiService.getDashboardStats();
   }
 
-  // ================== KGB NOTIFIKASI ==================
-  @Get('kgb/notifikasi')
-  @ApiOperation({ summary: 'Notifikasi KGB terdekat atau terlewat' })
-  async getKGBNotif() {
-    return this.pegawaiService.getKGBNotif();
-  }
-
   // ================== PROSES KGB OTOMATIS ==================
   @Get('kgb/proses')
-    @ApiOperation({ summary: 'Memproses KGB otomatis' })
-    async prosesKGB() {
-      return this.pegawaiService.processKGBOtomatis();
-    }
+  @ApiOperation({ summary: 'Memproses KGB otomatis dan kirim email admin' })
+  async prosesKGB() {
+    return this.pegawaiService.processKGBOtomatis();
+  }
 
-  // ================== BY NIP (PALING BAWAH) ==================
+  // ================== READ BY NIP (PALING BAWAH) ==================
   @Get(':nip')
   @ApiOperation({ summary: 'Mengambil data pegawai berdasarkan NIP' })
   async findOne(@Param('nip') nip: string) {
     return this.pegawaiService.findOne(nip);
   }
 
+  // ================== UPDATE ==================
   @Put(':nip')
   @ApiOperation({ summary: 'Update data pegawai' })
-  async update(@Param('nip') nip: string, @Body() dto: UpdatePegawaiDto) {
+  async update(
+    @Param('nip') nip: string,
+    @Body() dto: UpdatePegawaiDto,
+  ) {
     return this.pegawaiService.update(nip, dto);
-  }
-
-  @Delete(':nip')
-  @ApiOperation({ summary: 'Hapus data pegawai' })
-  async remove(@Param('nip') nip: string) {
-    return this.pegawaiService.remove(nip);
   }
 }
